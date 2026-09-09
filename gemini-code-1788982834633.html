@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI English Fluency Tutor - 9th Grade ESL</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .chat-scroll::-webkit-scrollbar { width: 6px; }
+        .chat-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 0.3; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .mic-active { animation: pulse-ring 1.2s infinite ease-in-out; }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col items-center justify-center p-2 sm:p-4">
+
+    <!-- Main Container -->
+    <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col h-[650px]">
+        
+        <!-- Header -->
+        <header class="bg-indigo-600 text-white p-4 flex flex-wrap justify-between items-center gap-2">
+            <div>
+                <h1 class="font-bold text-lg sm:text-xl flex items-center gap-2">
+                    <i class="fa-solid font-bold fa-robot"></i> Alex - AI English Tutor
+                </h1>
+                <p class="text-xs text-indigo-100">Topic: Feelings, Emotions & Tenses (9th Grade)</p>
+            </div>
+            
+            <!-- Voice Selector -->
+            <div class="flex items-center gap-2 text-xs bg-indigo-700/60 p-1.5 rounded-lg border border-indigo-400/30">
+                <i class="fa-solid fa-user-gear"></i>
+                <select id="voiceGender" class="bg-transparent text-white focus:outline-none cursor-pointer">
+                    <option value="female" class="text-slate-800">Female (American)</option>
+                    <option value="male" class="text-slate-800">Male (American)</option>
+                </select>
+            </div>
+        </header>
+
+        <!-- Mode Selection Tabs & Timer -->
+        <div class="bg-slate-50 border-b border-slate-200 p-3 flex flex-wrap justify-between items-center gap-2">
+            <div class="flex gap-1 sm:gap-2 text-xs font-semibold">
+                <button onclick="setMode('listen')" id="btn-listen" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white transition-all">
+                    <i class="fa-solid fa-headphones mr-1"></i> Listen & Repeat
+                </button>
+                <button onclick="setMode('chat3')" id="btn-chat3" class="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 transition-all">
+                    <i class="fa-solid fa-clock mr-1"></i> 3-Min Chat
+                </button>
+                <button onclick="setMode('chat5')" id="btn-chat5" class="px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 transition-all">
+                    <i class="fa-solid fa-comments mr-1"></i> 5-Min Chat
+                </button>
+            </div>
+
+            <!-- Countdown Timer -->
+            <div id="timerBadge" class="hidden text-xs font-mono font-bold bg-amber-100 text-amber-800 px-2.5 py-1 rounded-full border border-amber-300">
+                ⏱️ <span id="timerDisplay">03:00</span>
+            </div>
+        </div>
+
+        <!-- Chat Transcript Display -->
+        <div id="chatBox" class="flex-1 p-4 overflow-y-auto chat-scroll space-y-3 bg-slate-50/50">
+            <!-- Messages inserted here -->
+        </div>
+
+        <!-- Tutor Speaking Status Bar -->
+        <div id="statusText" class="px-4 py-1 text-xs text-slate-500 font-medium bg-slate-100 border-t border-slate-200 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Ready to practice!
+        </div>
+
+        <!-- Interactive Control Bar -->
+        <div class="p-3 bg-white border-t border-slate-200 flex flex-col gap-2">
+            
+            <!-- Quick Action Buttons -->
+            <div class="flex justify-between items-center gap-2">
+                <button onclick="repeatLastSpeech()" class="flex-1 py-2 px-3 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-semibold rounded-lg text-xs border border-indigo-200 transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-rotate-right"></i> Repeat Audio
+                </button>
+                
+                <button onclick="activateHelpMode()" class="flex-1 py-2 px-3 bg-amber-50 text-amber-800 hover:bg-amber-100 font-semibold rounded-lg text-xs border border-amber-200 transition flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-lightbulb text-amber-500"></i> I Need Help (Spanish)
+                </button>
+            </div>
+
+            <!-- Input Controls (Mic + Fallback Text) -->
+            <div class="flex items-center gap-2 mt-1">
+                <button id="micBtn" onclick="toggleMicrophone()" class="w-12 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-md transition-all text-lg shrink-0">
+                    <i id="micIcon" class="fa-solid fa-microphone"></i>
+                </button>
+                
+                <input type="text" id="userInput" placeholder="Type or speak in English..." class="flex-1 bg-slate-100 border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeypress="if(event.key==='Enter') sendUserMessage()">
+                
+                <button onclick="sendUserMessage()" class="bg-indigo-600 text-white px-4 py-2.5 rounded-lg font-medium text-sm hover:bg-indigo-700 transition shrink-0">
+                    Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        let currentMode = 'listen'; // 'listen', 'chat3', 'chat5'
+        let subState = 'normal';   // 'normal', 'help_waiting_spanish', 'help_repeat_english'
+        let lastAiSpeech = "";
+        let pendingEnglishTranslation = "";
+        let isListening = false;
+        let timerInterval = null;
+        let timeLeft = 0;
+        let currentListenIndex = 0;
+
+        // Sample Sentences for "Listen & Repeat" Focus (Feelings + Tenses)
+        const listenSentences = [
+            "I felt very nervous yesterday before my math test.",
+            "She is excited because today is her birthday.",
+            "We were happy when our team won the basketball game.",
+            "I feel tired right now because I slept late last night.",
+            "He was angry about the broken phone, but now he is calm."
+        ];
+
+        // Web Speech APIs Setup
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = SpeechRecognition ? new SpeechRecognition() : null;
+        if (recognition) {
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('userInput').value = transcript;
+                stopMic();
+                sendUserMessage();
+            };
+
+            recognition.onerror = () => stopMic();
+            recognition.onend = () => stopMic();
+        }
+
+        // --- Core Functions ---
+
+        function init() {
+            setMode('listen');
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            clearInterval(timerInterval);
+            document.getElementById('timerBadge').classList.add('hidden');
+            document.getElementById('chatBox').innerHTML = "";
+            subState = 'normal';
+
+            // Tab Styling Updates
+            ['listen', 'chat3', 'chat5'].forEach(m => {
+                const btn = document.getElementById(`btn-${m}`);
+                if (m === mode) {
+                    btn.className = "px-3 py-1.5 rounded-lg bg-indigo-600 text-white transition-all";
+                } else {
+                    btn.className = "px-3 py-1.5 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 transition-all";
+                }
+            });
+
+            if (mode === 'listen') {
+                currentListenIndex = 0;
+                addAiMessage("Welcome to **Listen & Repeat**! Listen to the sentence, then click the microphone to repeat it back.");
+                playListenTarget();
+            } else if (mode === 'chat3' || mode === 'chat5') {
+                timeLeft = mode === 'chat3' ? 180 : 300;
+                document.getElementById('timerBadge').classList.remove('hidden');
+                updateTimerDisplay();
+                startTimer();
+                addAiMessage("Hello! I'm Alex. How are you feeling today, and what did you do earlier?");
+                speakText("Hello! I'm Alex. How are you feeling today, and what did you do earlier?");
+            }
+        }
+
+        function playListenTarget() {
+            const target = listenSentences[currentListenIndex];
+            const msg = `**Sentence #${currentListenIndex + 1}:**\n"${target}"`;
+            addAiMessage(msg);
+            speakText(target);
+        }
+
+        function speakText(text) {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel(); // Stop current speech
+            
+            lastAiSpeech = text;
+            const cleanText = text.replace(/[*_#"]/g, ''); // Strip markdown
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            
+            // Voice selection logic
+            const voices = window.speechSynthesis.getVoices();
+            const gender = document.getElementById('voiceGender').value;
+            
+            let selectedVoice = voices.find(v => v.lang.includes('en-US') && 
+                (gender === 'female' ? (v.name.includes('Zira') || v.name.includes('Samantha') || v.name.includes('Female')) : (v.name.includes('David') || v.name.includes('Alex') || v.name.includes('Male'))));
+            
+            if (!selectedVoice) {
+                selectedVoice = voices.find(v => v.lang.includes('en-US')) || voices[0];
+            }
+            if (selectedVoice) utterance.voice = selectedVoice;
+
+            utterance.rate = 0.9; // Slightly slower for language learners
+            
+            document.getElementById('statusText').innerHTML = `<span class="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span> Alex is speaking...`;
+            utterance.onend = () => {
+                document.getElementById('statusText').innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Your turn! Speak or type.`;
+            };
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function repeatLastSpeech() {
+            if (lastAiSpeech) speakText(lastAiSpeech);
+        }
+
+        // --- Spanish "I Need Help" Logic Loop ---
+        function activateHelpMode() {
+            subState = 'help_waiting_spanish';
+            const promptSpan = "¿Qué es lo que quieres decir en español?";
+            addAiMessage(`💡 **Help Mode Active:** ${promptSpan}`);
+            
+            // Speak in Spanish for the student
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(promptSpan);
+                utterance.lang = 'es-ES';
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function translateSpanishToEnglish(spanishInput) {
+            const lower = spanishInput.toLowerCase().trim();
+            
+            // Smart local translation dictionary for 9th-grade emotions & tenses
+            if (lower.includes("triste")) return "I feel sad today because I had a hard day.";
+            if (lower.includes("feliz") || lower.includes("contento")) return "I feel very happy today!";
+            if (lower.includes("miedo") || lower.includes("asustado")) return "I was scared when I heard the noise.";
+            if (lower.includes("cansado")) return "I am tired because I slept late yesterday.";
+            if (lower.includes("enojado") || lower.includes("molesto")) return "I was angry this morning.";
+            if (lower.includes("nervioso")) return "I feel nervous about my English exam.";
+            if (lower.includes("futbol") || lower.includes("fútbol")) return "I played soccer with my friends yesterday.";
+            if (lower.includes("tarea")) return "I finished my homework yesterday afternoon.";
+            
+            // Default fallback response template
+            return "I feel good today and I am practicing my English.";
+        }
+
+        // --- Message Processing Logic ---
+        function sendUserMessage() {
+            const inputField = document.getElementById('userInput');
+            const text = inputField.value.trim();
+            if (!text) return;
+
+            addUserMessage(text);
+            inputField.value = "";
+
+            // Handle "I Need Help" workflow
+            if (subState === 'help_waiting_spanish') {
+                pendingEnglishTranslation = translateSpanishToEnglish(text);
+                subState = 'help_repeat_english';
+                const response = `En inglés puedes decir: "${pendingEnglishTranslation}"\n\n¡Ahora inténtalo tú! Repítelo en inglés.`;
+                addAiMessage(response);
+                speakText(`In English you can say: ${pendingEnglishTranslation}. Now you try! Repeat it in English.`);
+                return;
+            }
+
+            if (subState === 'help_repeat_english') {
+                subState = 'normal';
+                addAiMessage("¡Excelente trabajo! Great job repeating that. Let's continue!");
+                speakText("Great job repeating that sentence! Let's continue our conversation.");
+                return;
+            }
+
+            // Normal Mode Responses
+            if (currentMode === 'listen') {
+                const target = listenSentences[currentListenIndex];
+                addAiMessage(`Great effort! You said: "${text}".`);
+                speakText("Great effort!");
+                
+                setTimeout(() => {
+                    currentListenIndex = (currentListenIndex + 1) % listenSentences.length;
+                    playListenTarget();
+                }, 2000);
+            } else {
+                generateChatResponse(text);
+            }
+        }
+
+        function generateChatResponse(userText) {
+            // Conversational logic focusing on present/past tense & emotions
+            const lower = userText.toLowerCase();
+            let aiReply = "";
+
+            if (lower.includes("happy") || lower.includes("good") || lower.includes("great")) {
+                aiReply = "I am so glad to hear that you feel happy! What was something good that happened to you earlier today?";
+            } else if (lower.includes("sad") || lower.includes("bad") || lower.includes("tired")) {
+                aiReply = "I am sorry you are feeling that way. Did you get enough sleep last night, or was today very busy?";
+            } else if (lower.includes("yesterday") || lower.includes("played") || lower.includes("went") || lower.includes("did")) {
+                aiReply = "That sounds interesting! How did you feel while you were doing that?";
+            } else {
+                aiReply = "That's nice! How are you feeling right now, and what are your plans for later today?";
+            }
+
+            addAiMessage(aiReply);
+            speakText(aiReply);
+        }
+
+        // --- UI Rendering Helpers ---
+        function addAiMessage(text) {
+            const box = document.getElementById('chatBox');
+            const formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            box.innerHTML += `
+                <div class="flex items-start gap-2.5">
+                    <div class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0">AI</div>
+                    <div class="bg-white border border-slate-200 text-slate-800 p-3 rounded-2xl rounded-tl-none shadow-sm text-sm max-w-[85%] leading-relaxed">
+                        ${formatted}
+                    </div>
+                </div>`;
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function addUserMessage(text) {
+            const box = document.getElementById('chatBox');
+            box.innerHTML += `
+                <div class="flex items-start justify-end gap-2.5">
+                    <div class="bg-indigo-600 text-white p-3 rounded-2xl rounded-tr-none shadow-sm text-sm max-w-[85%] leading-relaxed">
+                        ${text}
+                    </div>
+                    <div class="w-8 h-8 rounded-full bg-slate-700 text-white flex items-center justify-center text-xs font-bold shrink-0">You</div>
+                </div>`;
+            box.scrollTop = box.scrollHeight;
+        }
+
+        // --- Timer Controls ---
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    addAiMessage("⏰ **Time's up!** Wonderful job practicing your speaking today. Keep up the great work!");
+                    speakText("Time is up! Wonderful job practicing your speaking today. Keep up the great work!");
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            const secs = (timeLeft % 60).toString().padStart(2, '0');
+            document.getElementById('timerDisplay').innerText = `${mins}:${secs}`;
+        }
+
+        // --- Microphone Controls ---
+        function toggleMicrophone() {
+            if (!recognition) {
+                alert("Speech recognition is not supported in this browser. Please type your message.");
+                return;
+            }
+            if (isListening) stopMic();
+            else startMic();
+        }
+
+        function startMic() {
+            if (subState === 'help_waiting_spanish') recognition.lang = 'es-ES';
+            else recognition.lang = 'en-US';
+
+            recognition.start();
+            isListening = true;
+            document.getElementById('micBtn').className = "w-12 h-12 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md mic-active text-lg shrink-0";
+            document.getElementById('statusText').innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span> Listening... speak now!`;
+        }
+
+        function stopMic() {
+            if (recognition) recognition.stop();
+            isListening = false;
+            document.getElementById('micBtn').className = "w-12 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-md transition-all text-lg shrink-0";
+            document.getElementById('statusText').innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> Ready to practice!`;
+        }
+
+        // Initialize on page load
+        window.onload = init;
+    </script>
+</body>
+</html>
